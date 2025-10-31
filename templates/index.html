@@ -3,13 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>First Project</title>
+    <title>Flask Weather App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
-    Hello World
+<body class="bg-gray-50 min-h-screen flex flex-col items-center p-8 font-['Inter']">
 
-    <div id="data">
-        
+    <div class="w-full max-w-lg bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Live Weather Status</h1>
+
+        <!-- City Input Form -->
+        <form action="{{ url_for('fetch_city') }}" method="post" class="flex flex-col sm:flex-row gap-3 mb-8">
+            <label for="city_input" class="sr-only">Enter City Name:</label>
+            <input 
+                type="text" 
+                id="city_input" 
+                name="city_input" 
+                placeholder="Enter City Name (e.g., Tokyo)" 
+                required
+                class="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+            <button 
+                type="submit"
+                class="p-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition duration-150"
+            >
+                Submit
+            </button>
+        </form>
+
+        <!-- Output Display Area -->
+        <div 
+            class="output bg-indigo-50 border border-indigo-200 p-6 rounded-lg min-h-[150px] flex items-center justify-center" 
+            id="output">
+            <!-- Initial message or loading indicator -->
+            <p class="text-gray-500 text-center">Submit a city to view weather data.</p>
+        </div>
+
     </div>
 
     <script src="/static/script.js"></script>

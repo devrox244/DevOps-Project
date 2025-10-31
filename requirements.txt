@@ -1,2 +1,3 @@
 flask
 git+https://github.com/weatherapicom/python.git#egg=weatherapipython
+dotenv

@@ -1,17 +1,10 @@
-/*
-Corrected JavaScript for fetching data from the Flask API.
-Your original code failed because fetch() and response.json() are asynchronous 
-operations that return Promises, which must be handled with .then() or async/await.
-*/
-
 // Use an async function to allow for the 'await' keyword
 async function fetchAndDisplayData() {
     // 1. Get the DOM element
-    const dataDiv = document.getElementById("data");
-    const loadingMessage = document.getElementById("loading-status");
+    const outputDiv = document.getElementById("output");
     
     // Clear the placeholder content/message
-    dataDiv.innerHTML = '';
+    outputDiv.innerHTML = '';
 
     try {
         // 2. Await the fetch call to get the HTTP Response object
@@ -29,16 +22,20 @@ async function fetchAndDisplayData() {
         const content = `
             <div class="space-y-1">
                 <p class="text-lg text-gray-800"><span class="font-bold text-indigo-700">Name:</span> ${data.name}</p>
-                <p class="text-lg text-gray-800"><span class="font-bold text-indigo-700">ID:</span> ${data.ID}</p>
+                <p class="text-lg text-gray-800"><span class="font-bold text-indigo-700">Region:</span> ${data.region}</p>
+                <p class="text-lg text-gray-800"><span class="font-bold text-indigo-700">Temp:</span> ${data.temp}</p>
+                <p class="text-lg text-gray-800"><span class="font-bold text-indigo-700">Time:</span> ${data.day}</p>
+                <p class="text-lg text-gray-800"><span class="font-bold text-indigo-700">Condition:</span> ${data.condition_text}</p>
+                <p class="text-lg text-gray-800"><span class="font-bold text-indigo-700">Feelslike:</span> ${data.feels}</p>
             </div>
         `;
         
-        dataDiv.innerHTML = content;
+        outputDiv.innerHTML = content;
         
     } catch (error) {
         // 5. Handle any errors during fetch or parsing
         console.error("Error fetching data:", error);
-        dataDiv.innerHTML = `
+        outputDiv.innerHTML = `
             <p class="text-red-500 font-semibold">Error loading data. Check console for details.</p>
         `;
     } finally {
