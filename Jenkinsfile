@@ -27,9 +27,13 @@ pipeline {
 
         stage('2. Compile (Setup & Linting)') {
             steps {
-                // Create and activate an isolated Python virtual environment (VENV)
+                // FIX: Install the missing venv utility package first
+                sh 'apt update && apt install -y python3-venv'
+                
+                // Now, create and activate an isolated Python virtual environment (VENV)
                 sh "python3 -m venv ${VENV_DIR}"
-                sh ". ${VENV_DIR}/bin/activate" 
+                
+                sh ". ${VENV_DIR}/bin/activate"
                 
                 // Install linting tool
                 sh "pip install pylint"
