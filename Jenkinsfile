@@ -1,7 +1,11 @@
 // Jenkinsfile - Declarative Pipeline for Python Flask CI/CD
 
 pipeline {
-    agent any
+    agent {
+        docker{
+            image 'python:3.10-slim'
+        }
+    }
 
     // 1. Define Environment Variables, including securing the API Key
     environment {
@@ -109,8 +113,8 @@ pipeline {
     post {
         always {
             echo 'Pipeline completed. Cleaning up local VENV.'
-            // Clean up the local VENV on the Jenkins agent
-            sh "rm -rf ${VENV_DIR}"
+            // Use Bash variable syntax with a protective backslash
+            sh "rm -rf \$VENV_DIR"
         }
         unstable {
             // Publish test results if tests failed
