@@ -7,7 +7,7 @@ pipeline {
     // 1. Define Environment Variables
     environment {
         WEATHER_API = credentials('weather-api-key')
-        REMOTE_SERVER = 'ubuntu@13.232.66.82'
+        REMOTE_SERVER = 'ubuntu@3.109.155.247'
         REMOTE_PATH   = '/opt/weather-app'
     }
 
