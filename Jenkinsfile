@@ -1,90 +1,64 @@
-// Jenkinsfile - Final Version using Docker Agent
+// Jenkinsfile - Final Simplified Version (All Build Steps on Remote)
 
 pipeline {
-    // FIX: Use a Docker agent that already has Python + Venv pre-installed
-    agent {
-        docker { 
-            image 'python:3.10-slim' 
-        }
-    }
+    // This agent just needs to run the git checkout and ssh commands
+    agent any
 
     // 1. Define Environment Variables
     environment {
         WEATHER_API = credentials('weather-api-key')
         REMOTE_SERVER = 'ubuntu@13.232.66.82'
         REMOTE_PATH   = '/opt/weather-app'
-        VENV_DIR      = 'venv' // Name for the venv *inside the agent*
     }
 
     stages {
         stage('1. Git Code Checkout') {
             steps {
                 echo 'Cloning repository...'
-                // This 'checkout scm' step is now required
-                checkout scm
+                git branch: 'main', url: 'https://github.com/devrox244/DevOps-Project'
             }
         }
 
-        stage('2. Compile (Setup & Linting)') {
-            steps {
-                // REMOVED: All 'apt' and 'sudo' commands.
-                
-                // Create and activate an isolated Python virtual environment
-                sh "python3 -m venv ${VENV_DIR}"
-                
-                sh ". ${VENV_DIR}/bin/activate" 
-                
-                // Install linting tool
-                sh "pip install pylint"
-                
-                // Run pylint on your application file
-                sh "pylint app.py"
-            }
-        }
-
-        stage('3. Build/Package/Unit Testing') {
-            steps {
-                // Activate the VENV from the previous stage
-                sh ". ${VENV_DIR}/bin/activate"
-                
-                echo 'Installing project dependencies...'
-                sh 'pip install -r requirements.txt'
-
-                echo 'Running unit tests...'
-                sh 'pip install pytest'
-                sh 'pytest --junitxml=test-results.xml || true'
-            }
-        }
-
-        stage('4. SonarQube (Optional)') {
-            steps {
-                echo 'Skipping SonarQube analysis.'
-            }
-        }
-
-        stage('5. Deploying on Server') {
-            // This stage runs on the same Python container agent
+        // This is now the ONLY other stage. It does everything.
+        stage('2. Build, Test, and Deploy on EC2 Server') {
             steps {
                 sshagent(credentials: ['deploy-ssh-key']) {
-                    echo "Deploying to ${REMOTE_SERVER} at ${REMOTE_PATH}"
+                    echo "Connecting to ${REMOTE_SERVER}..."
                     
-                    // We need the 'ssh-keyscan' utility, which isn't in this
-                    // minimal image. We will add it.
-                    sh "apt-get update && apt-get install -y openssh-client"
-                    
+                    // 1. Transfer the source code to the EC2 server
                     sh "scp -o StrictHostKeyChecking=no -r ./* ${REMOTE_SERVER}:${REMOTE_PATH}"
                     
+                    // 2. Execute ALL commands on the EC2 server
                     sh """
                         ssh -o StrictHostKeyChecking=no ${REMOTE_SERVER} "
+                            # Navigate to the deployment directory
                             cd ${REMOTE_PATH} || exit 1
-                            echo 'Stopping old process...'
-                            pkill -f 'python app.py' || true
+
+                            # --- 1. COMPILE/BUILD STEP (on EC2) ---
                             echo 'Setting up remote VENV...'
                             python3 -m venv venv_remote
                             . venv_remote/bin/activate
+                            
+                            echo 'Installing dependencies...'
                             pip install -r requirements.txt
+                            
+                            echo 'Installing build tools...'
+                            pip install pylint pytest
+                            
+                            # --- 2. TEST STEP (on EC2) ---
+                            echo 'Running Linter...'
+                            pylint app.py
+                            
+                            echo 'Running Unit Tests...'
+                            pytest || true
+
+                            # --- 3. DEPLOY STEP (on EC2) ---
+                            echo 'Stopping old process...'
+                            pkill -f 'python app.py' || true
+                            
                             echo 'Starting new application instance...'
                             nohup WEATHER_API='${env.WEATHER_API}' python3 app.py > app.log 2>&1 &
+                            
                             echo 'Deployment complete. App is running in the background.'
                         "
                     """
@@ -93,17 +67,10 @@ pipeline {
         }
     }
     
-    // Post-build actions for cleanup
+    // Simplified post-build actions
     post {
         always {
-            echo 'Pipeline completed. Cleaning up local VENV.'
-            // This 'script' block provides the necessary context for the 'sh' step
-            script {
-                sh "rm -rf \$VENV_DIR" 
-            }
-        }
-        unstable {
-            junit '**/test-results.xml' 
+            echo 'Pipeline completed.'
         }
         success {
             echo 'Build and Deployment Succeeded!'
