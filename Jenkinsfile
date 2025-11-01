@@ -1,29 +1,26 @@
 // Jenkinsfile - Declarative Pipeline for Python Flask CI/CD
 
 pipeline {
-    agent {
-        docker{
-            image 'python:3.10-slim'
-        }
-    }
+    // FIX: Changed from 'agent { docker { ... } }' back to 'agent any'
+    // This runs on the Jenkins build agent (the master or a designated node)
+    agent any
 
     // 1. Define Environment Variables, including securing the API Key
     environment {
-        // This securely injects the API Key from Jenkins Credentials into the
-        // environment variable WEATHER_API, required by app.py
+        // Corrected ID to use the label set in Jenkins Credentials
         WEATHER_API = credentials('weather-api-key')
         
-        // Deployment configuration variables
+        // Deployment configuration variables (Finalized EC2 details)
         REMOTE_SERVER = 'ubuntu@13.232.66.82'
         REMOTE_PATH   = '/opt/weather-app'
-        VENV_DIR      = 'venv'
+        VENV_DIR      = 'venv' // Local VENV name
     }
 
     stages {
         stage('1. Git Code Checkout') {
             steps {
                 echo 'Cloning repository...'
-                // Note: The git command is configured in the job settings, but can be added here:
+                // Public repo URL:
                 git branch: 'main', url: 'https://github.com/devrox244/DevOps-Project'
             }
         }
@@ -52,26 +49,21 @@ pipeline {
                 sh 'pip install -r requirements.txt'
 
                 echo 'Running unit tests...'
-                // Install testing tool and run tests (You need to write a separate test_app.py file)
+                // Install testing tool and run tests 
                 sh 'pip install pytest'
-                // This command saves results in a report and uses '|| true' so test failures don't stop the build.
+                // Runs tests and allows pipeline to continue on test failure
                 sh 'pytest --junitxml=test-results.xml || true'
             }
         }
 
-        // SonarQube is optional but is the standard place for it.
         stage('4. SonarQube (Optional)') {
             steps {
                 echo 'Skipping SonarQube analysis.'
-                // Uncomment and customize if you integrate SonarQube
-                // withSonarQubeEnv('Your SonarQube Server Name') {
-                //     sh 'sonar-scanner'
-                // }
             }
         }
 
         stage('5. Deploying on Server') {
-            // The sshagent block loads the private key from the credentials manager
+            // Loads the private key from the 'deploy-ssh-key' credential
             steps {
                 sshagent(credentials: ['deploy-ssh-key']) {
                     echo "Deploying to ${REMOTE_SERVER} at ${REMOTE_PATH}"
@@ -113,8 +105,10 @@ pipeline {
     post {
         always {
             echo 'Pipeline completed. Cleaning up local VENV.'
-            // Use Bash variable syntax with a protective backslash
-            sh "rm -rf \$VENV_DIR"
+            // FIX: Use 'script' block to provide context and use correct '\$VENV_DIR' syntax
+            script {
+                sh "rm -rf \$VENV_DIR" 
+            }
         }
         unstable {
             // Publish test results if tests failed
