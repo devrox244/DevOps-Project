@@ -1,13 +1,11 @@
 // Jenkinsfile - Declarative Pipeline for Python Flask CI/CD
 
 pipeline {
-    // FIX: Changed from 'agent { docker { ... } }' back to 'agent any'
-    // This runs on the Jenkins build agent (the master or a designated node)
     agent any
 
-    // 1. Define Environment Variables, including securing the API Key
+    // 1. Define Environment Variables
     environment {
-        // Corrected ID to use the label set in Jenkins Credentials
+        // Fetches the secret API key from Jenkins Credentials
         WEATHER_API = credentials('weather-api-key')
         
         // Deployment configuration variables (Finalized EC2 details)
@@ -20,20 +18,19 @@ pipeline {
         stage('1. Git Code Checkout') {
             steps {
                 echo 'Cloning repository...'
-                // Public repo URL:
                 git branch: 'main', url: 'https://github.com/devrox244/DevOps-Project'
             }
         }
 
         stage('2. Compile (Setup & Linting)') {
             steps {
-                // FIX: Install the missing venv utility package first
-                sh 'apt update && apt install -y python3-venv'
+                // FIX: Use 'sudo' to grant root privileges for package installation
+                sh 'sudo apt update && sudo apt install -y python3-venv'
                 
-                // Now, create and activate an isolated Python virtual environment (VENV)
+                // Create and activate an isolated Python virtual environment (VENV)
                 sh "python3 -m venv ${VENV_DIR}"
                 
-                sh ". ${VENV_DIR}/bin/activate"
+                sh ". ${VENV_DIR}/bin/activate" 
                 
                 // Install linting tool
                 sh "pip install pylint"
@@ -109,7 +106,7 @@ pipeline {
     post {
         always {
             echo 'Pipeline completed. Cleaning up local VENV.'
-            // FIX: Use 'script' block to provide context and use correct '\$VENV_DIR' syntax
+            // This 'script' block provides the necessary context for the 'sh' step
             script {
                 sh "rm -rf \$VENV_DIR" 
             }
