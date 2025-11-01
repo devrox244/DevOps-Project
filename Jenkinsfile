@@ -1,27 +1,40 @@
-// Jenkinsfile - Final Simplified Version
+// Jenkinsfile - Final Version using Docker Agent
 
 pipeline {
-    // Run directly on the Jenkins agent
-    agent any
+    // FIX: Use a Docker agent that already has Python + Venv pre-installed
+    agent {
+        docker { 
+            image 'python:3.10-slim' 
+        }
+    }
 
     // 1. Define Environment Variables
     environment {
         WEATHER_API = credentials('weather-api-key')
         REMOTE_SERVER = 'ubuntu@13.232.66.82'
         REMOTE_PATH   = '/opt/weather-app'
+        VENV_DIR      = 'venv' // Name for the venv *inside the agent*
     }
 
     stages {
         stage('1. Git Code Checkout') {
             steps {
                 echo 'Cloning repository...'
-                git branch: 'main', url: 'https://github.com/devrox244/DevOps-Project'
+                // This 'checkout scm' step is now required
+                checkout scm
             }
         }
 
-        stage('2. Compile (Linting)') {
+        stage('2. Compile (Setup & Linting)') {
             steps {
-                // FIX: No VENV. Install tools directly on the agent.
+                // REMOVED: All 'apt' and 'sudo' commands.
+                
+                // Create and activate an isolated Python virtual environment
+                sh "python3 -m venv ${VENV_DIR}"
+                
+                sh ". ${VENV_DIR}/bin/activate" 
+                
+                // Install linting tool
                 sh "pip install pylint"
                 
                 // Run pylint on your application file
@@ -31,8 +44,10 @@ pipeline {
 
         stage('3. Build/Package/Unit Testing') {
             steps {
+                // Activate the VENV from the previous stage
+                sh ". ${VENV_DIR}/bin/activate"
+                
                 echo 'Installing project dependencies...'
-                // FIX: Install requirements directly.
                 sh 'pip install -r requirements.txt'
 
                 echo 'Running unit tests...'
@@ -48,9 +63,14 @@ pipeline {
         }
 
         stage('5. Deploying on Server') {
+            // This stage runs on the same Python container agent
             steps {
                 sshagent(credentials: ['deploy-ssh-key']) {
                     echo "Deploying to ${REMOTE_SERVER} at ${REMOTE_PATH}"
+                    
+                    // We need the 'ssh-keyscan' utility, which isn't in this
+                    // minimal image. We will add it.
+                    sh "apt-get update && apt-get install -y openssh-client"
                     
                     sh "scp -o StrictHostKeyChecking=no -r ./* ${REMOTE_SERVER}:${REMOTE_PATH}"
                     
@@ -76,8 +96,11 @@ pipeline {
     // Post-build actions for cleanup
     post {
         always {
-            // FIX: Removed the 'rm -rf venv' since we are not creating it locally.
-            echo 'Pipeline completed.'
+            echo 'Pipeline completed. Cleaning up local VENV.'
+            // This 'script' block provides the necessary context for the 'sh' step
+            script {
+                sh "rm -rf \$VENV_DIR" 
+            }
         }
         unstable {
             junit '**/test-results.xml' 
