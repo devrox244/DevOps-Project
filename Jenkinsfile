@@ -6,7 +6,7 @@ pipeline {
     environment {
         WEATHER_API = credentials('weather-api-key')
         // MAKE SURE THIS IS THE IP OF YOUR LATEST EC2 INSTANCE
-        REMOTE_SERVER = 'ubuntu@[YOUR_NEW_EC2_IP]' 
+        REMOTE_SERVER = 'ubuntu@54.12.34.56' // <-- (Use YOUR real IP)
         REMOTE_PATH   = '/opt/weather-app'
     }
 
